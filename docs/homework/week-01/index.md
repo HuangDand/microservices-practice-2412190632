@@ -1,5 +1,5 @@
 **环境检查
-java --version：
+***java --version：
 openjdk 17.0.20 2026-07-21
 OpenJDK Runtime Environment (build 17.0.20+8-1-26.04-Ubuntu)
 OpenJDK 64-Bit Server VM (build 17.0.20+8-1-26.04-Ubuntu, mixed mode, sharing)
