@@ -1,15 +1,18 @@
- java --version：
+java --version：
 openjdk 17.0.20 2026-07-21
 OpenJDK Runtime Environment (build 17.0.20+8-1-26.04-Ubuntu)
 OpenJDK 64-Bit Server VM (build 17.0.20+8-1-26.04-Ubuntu, mixed mode, sharing)
+
 mvn --version：
 Apache Maven 3.9.12
 Maven home: /usr/share/maven
 Java version: 17.0.20, vendor: Ubuntu, runtime: /usr/lib/jvm/java-17-openjdk-amd64
 Default locale: en, platform encoding: UTF-8
 OS name: "linux", version: "6.18.33.2-microsoft-standard-wsl2", arch: "amd64", family: "unix"
+
 git --version：
 git version 2.53.0
+
 docker version：
 Client:
  Version:           29.7.2
@@ -38,6 +41,7 @@ Server: Docker Desktop 4.90.0 (238679)
  docker-init:
   Version:          0.19.0
   GitCommit:        de40ad0
+
 docker compose version：Docker Compose version v5.5.1
 
 ## 概念回答
