@@ -1,3 +1,4 @@
+**环境检查
 java --version：
 openjdk 17.0.20 2026-07-21
 OpenJDK Runtime Environment (build 17.0.20+8-1-26.04-Ubuntu)
