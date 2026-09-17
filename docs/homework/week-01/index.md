@@ -1,17 +1,16 @@
-```
+
 # Week01 开发环境与个人仓库
 ## 环境检查
 ### java --version
-```
 
 openjdk 17.0.20 2026-07-21
 OpenJDK Runtime Environment (build 17.0.20+8-1-26.04-Ubuntu)
 OpenJDK 64‑Bit Server VM (build 17.0.20+8-1-26.04-Ubuntu, mixed mode, sharing)
 
-```
+
 
 ### mvn --version
-```
+
 
 Apache Maven 3.9.12
 Maven home: /usr/share/maven
@@ -19,17 +18,17 @@ Java version: 17.0.20, vendor: Ubuntu, runtime: /usr/lib/jvm/java-17-openjdk-amd
 Default locale: en, platform encoding: UTF-8
 OS name: "linux", version: "6.18.33.2-microsoft-standard-wsl2", arch: "amd64", family: "unix"
 
-```
+
 
 ### git --version
-```
+
 
 git version 2.53.0
 
-```
+
 
 ### docker version
-```
+
 
 Client:
 Version:           29.7.2
@@ -58,14 +57,14 @@ docker-init:
 Version:          0.19.0
 GitCommit:        de40ad0
 
-```
+
 
 ### docker compose version
-```
+
 
 Docker Compose version v5.5.1
 
-```
+
 
 ## 概念回答
 ### 什么是微服务架构？
@@ -82,5 +81,5 @@ Docker Compose version v5.5.1
 
 ## 问题记录
 1. WSL环境访问GitHub仓库出现443端口连接失败，无法执行git push推送，改为GitHub网页端创建目录与编辑文件完成仓库初始化。
-2. 初次在WSL调用Docker时出现docker.sock权限拒绝报错
-```
+2. 初次在WSL调用Docker时出现docker.sock权限拒绝报错，当前用户加入docker用户组，重启WSL终端后权限问题解决，可以正常获取docker客户端与服务端完整版本信息。
+
