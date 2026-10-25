@@ -176,3 +176,38 @@ http://localhost:8080/actuator/health
 
 每张截图应能够对应具体接口、请求参数和实际返回结果。
 
+## 数据库持久化
+
+### 实现思路
+
+项目采用 Spring Data JPA 作为持久化框架，使用 Repository 接口负责数据库读写，并通过 Service 层组织业务逻辑。Controller 负责接收 HTTP 请求和返回响应，API 输入使用 DTO 或请求对象承载。
+
+数据库设计围绕居民信息和报修工单展开。居民表保存基本信息，报修工单表通过居民 ID 关联居民，形成一对多关系。
+
+### 数据库配置
+
+数据库名称：`community_safety`。
+
+数据库类型：MySQL 8.4。
+
+应用通过 JDBC 连接 MySQL，数据库连接信息由应用配置文件和环境变量提供。提交到公开仓库的配置中不应包含真实密码。
+
+### 运行与验证
+
+启动应用后，使用以下命令新增居民：
+
+```bat
+curl.exe -i -X POST "http://localhost:8080/api/residents" -H "Content-Type: application/json" -d "{\"fullName\":\"张三\",\"phone\":\"13800000001\",\"building\":\"3号楼\",\"unitNumber\":\"2单元501\"}"
+```
+
+查询居民列表：
+
+```bat
+curl.exe -i "http://localhost:8080/api/residents"
+```
+
+通过 MySQL 查询居民记录，确认 API 创建的数据已保存至数据库。重启应用后再次查询，可进一步验证数据持久化。
+
+
+
+

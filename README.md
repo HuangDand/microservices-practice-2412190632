@@ -53,3 +53,13 @@
 - 公告通知模块：发布公告、安全提醒、不文明警告
 - 隐患台账模块：隐患上报、举报记录、隐患列表管理
 
+1. 新增居民
+curl.exe -i -X POST "http://localhost:8080/api/residents" -H "Content-Type: application/json" -d "{\"fullName\":\"张三\",\"phone\":\"13800000001\",\"building\":\"3号楼\",\"unitNumber\":\"2单元501\"}"
+
+
+2. 根据 ID 查询居民
+curl.exe -i "http://localhost:8080/api/residents/1"
+
+
+3. 查询居民列表
+curl.exe -i "http://localhost:8080/api/residents"
