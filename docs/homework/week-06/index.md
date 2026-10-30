@@ -29,3 +29,5 @@ docker compose ps
 curl -X POST http://localhost:8083/repairs \
 -H "Content-Type: application/json" \
 -d '{"residentId": 1, "content": "客厅灯光故障"}'
+使用 Docker Compose 编排住户服务 (resident-service) 和报修服务 (repair-service) 两个微服务，分别搭配独立 MySQL 数据库，实现数据隔离；容器内部通过服务名完成跨服务调用，报修创建时自动校验住户是否存在，拦截不存在住户的报修请求，防止脏数据写入；数据使用 volume 持久化。
+测试流程：新增住户 → 查询住户 → 合法住户创建报修成功 → 非法住户创建报修被拦截。
