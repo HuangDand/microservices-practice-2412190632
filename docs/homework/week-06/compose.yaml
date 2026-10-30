@@ -1,0 +1,116 @@
+# 本地编排：一键启动 2 个微服务 + 2 个独立 MySQL
+# 容器之间通过 Compose 服务名（DNS）通信，不使用 localhost。
+# 宿主机端口映射仅用于本机/IDE 调试。
+name: resident-services
+
+services:
+  # ---------- 业主服务数据库 ----------
+  resident-db:
+    image: mysql:8.4.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: resident_db
+      MYSQL_USER: resident_user
+      MYSQL_PASSWORD: ${RESIDENT_DB_PASSWORD:-resident-pass-123}
+      MYSQL_ROOT_PASSWORD: ${RESIDENT_DB_ROOT_PASSWORD:-resident-root-123}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3311:3306"          # 仅宿主机调试用
+    volumes:
+      - resident-db-data:/var/lib/mysql
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=tcp -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} -D $${MYSQL_DATABASE} -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ---------- 报修服务数据库 ----------
+  repair-db:
+    image: mysql:8.4.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: repair_db
+      MYSQL_USER: repair_user
+      MYSQL_PASSWORD: ${REPAIR_DB_PASSWORD:-repair-pass-123}
+      MYSQL_ROOT_PASSWORD: ${REPAIR_DB_ROOT_PASSWORD:-repair-root-123}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3312:3306"          # 仅宿主机调试用
+    volumes:
+      - repair-db-data:/var/lib/mysql
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=tcp -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} -D $${MYSQL_DATABASE} -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ---------- 业主服务 ----------
+  resident-service:
+    build: ./services/resident-service
+    restart: unless-stopped
+    ports:
+      - "8091:8081"          # 仅宿主机调试用
+    environment:
+      SERVER_PORT: 8081
+      SPRING_APPLICATION_NAME: resident-service
+      DB_URL: jdbc:mysql://resident-db:3306/resident_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USER: resident_user
+      DB_PASSWORD: ${RESIDENT_DB_PASSWORD:-resident-pass-123}
+    depends_on:
+      resident-db:
+        condition: service_healthy
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+
+  # ---------- 报修服务（通过服务名调用业主服务） ----------
+  repair-service:
+    build: ./services/repair-service
+    restart: unless-stopped
+    ports:
+      - "8092:8082"          # 仅宿主机调试用
+    environment:
+      SERVER_PORT: 8082
+      SPRING_APPLICATION_NAME: repair-service
+      DB_URL: jdbc:mysql://repair-db:3306/repair_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USER: repair_user
+      DB_PASSWORD: ${REPAIR_DB_PASSWORD:-repair-pass-123}
+      RESIDENT_SERVICE_URL: http://resident-service:8081
+    depends_on:
+      repair-db:
+        condition: service_healthy
+      resident-service:
+        condition: service_healthy
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8082 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+
+networks:
+  community-net:
+    driver: bridge
+
+volumes:
+  resident-db-data:
+  repair-db-data:
