@@ -53,3 +53,50 @@ try {
 
 Write-Host ""
 Write-Host "===== 全部验证完成 ====="
+#!/bin/bash
+set -euo pipefail
+
+# 服务地址
+RESIDENT_URL="http://localhost:8091"
+REPAIR_URL="http://localhost:8092"
+
+echo "===== 1. 健康检查：住户服务 health ====="
+curl -s -w "\nHTTP_STATUS:%{http_code}\n" "${RESIDENT_URL}/actuator/health"
+echo -e "\n===== 2. 健康检查：报修服务 health ====="
+curl -s -w "\nHTTP_STATUS:%{http_code}\n" "${REPAIR_URL}/actuator/health"
+
+echo -e "\n===== 3. 新增住户（业务前置数据） ====="
+RESIDENT_RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}\n" -X POST -H "Content-Type:application/json" -d '{
+"studentNumber":"2026001",
+"name":"小明",
+"fullName":"小明",
+"major":"计算机科学",
+"phone":"13800138000",
+"building":"1号楼",
+"unitNumber":"301"
+}' "${RESIDENT_URL}/api/residents")
+echo "$RESIDENT_RESP"
+
+echo -e "\n===== 4. 查询住户列表，确认住户创建成功 ====="
+curl -s -w "\nHTTP_STATUS:%{http_code}\n" "${RESIDENT_URL}/api/residents"
+
+echo -e "\n===== 5. 跨服务业务流程：合法住户创建报修（成功场景） ====="
+curl -s -w "\nHTTP_STATUS:%{http_code}\n" -X POST -H "Content-Type:application/json" -d '{
+"residentId":1,
+"title":"墙面渗水",
+"description":"卫生间墙面渗水，需要检修",
+"location":"1号楼301"
+}' "${REPAIR_URL}/api/repair-tickets"
+
+echo -e "\n===== 6. 失败场景：依赖资源不存在（residentId=999，住户不存在） ====="
+curl -s -w "\nHTTP_STATUS:%{http_code}\n" -X POST -H "Content-Type:application/json" -d '{
+"residentId":999,
+"title":"测试报修",
+"description":"非法住户测试",
+"location":"测试地址"
+}' "${REPAIR_URL}/api/repair-tickets"
+
+echo -e "\n===== 7. 失败场景：依赖服务不可用模拟（访问错误端口，模拟住户服务宕机） ====="
+curl -s -w "\nHTTP_STATUS:%{http_code}\n" --max-time 3 "http://localhost:9999/actuator/health" || echo "【预期失败】住户服务不可访问，超时/连接拒绝"
+
+echo -e "\n✅ 冒烟测试脚本执行完毕"
