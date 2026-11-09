@@ -1,0 +1,15 @@
+{
+  "code": "CS505",
+  "title": "容器化实践",
+  "instructor": {
+    "id": "T005",
+    "name": "赵老师",
+    "email": "zhao@example.edu"
+  },
+  "schedule": {
+    "dayOfWeek": "MONDAY",
+    "startTime": "13:40",
+    "endTime": "15:15"
+  },
+  "capacity": 30
+}

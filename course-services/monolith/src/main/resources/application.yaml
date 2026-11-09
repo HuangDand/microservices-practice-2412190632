@@ -1,0 +1,21 @@
+server:
+  port: 8084
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_DATABASE: course
+      MYSQL_USER: course
+      MYSQL_PASSWORD: 123
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/course?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USER: course
+      DB_PASSWORD: 123
+    depends_on:
+      - mysql

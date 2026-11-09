@@ -1,0 +1,14 @@
+# 真实环境变量（包含数据库密码、Nacos 密钥）
+.env
+
+# IDE / 构建
+.idea/
+.vscode/
+target/
+*.class
+*.jar
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
