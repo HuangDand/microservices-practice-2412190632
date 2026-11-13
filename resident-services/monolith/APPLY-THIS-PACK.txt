@@ -1,0 +1,8 @@
+这是第 04/05 周覆盖包，不代表代码已经推送到 GitHub 或在你的电脑上测试通过。
+
+1. 解压到现有仓库根目录并合并文件。
+2. 保留现有 `mvnw`、`mvnw.cmd` 和 `.mvn/wrapper/`；本包不包含 Wrapper 二进制。
+3. 将 `README-week04-week05-section.md` 合并到现有 README.md，不要覆盖原有第 02 周选题。
+4. 将 `.gitignore.append` 规则追加到根目录 `.gitignore`。
+5. 先在 `monolith/` 运行测试；通过后再配置 `.env` 并启动 Compose。
+6. 所有测试、接口响应和截图都必须实际执行后才能记录为完成。

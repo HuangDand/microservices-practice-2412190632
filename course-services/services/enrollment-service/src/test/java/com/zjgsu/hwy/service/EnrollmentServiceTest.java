@@ -65,15 +65,10 @@ class EnrollmentServiceTest {
         when(studentClient.findById(STUDENT_ID)).thenReturn(Map.of("id", STUDENT_ID));
     }
 
-    private void givenCourseOk() {
-        when(catalogClient.findById(COURSE_ID)).thenReturn(Map.of("id", COURSE_ID));
-    }
-
     @Test
-    void enroll_正常选课_按顺序校验学生_查询课程_占用名额_保存记录() {
-        givenStudentOk();
-        givenCourseOk();
+    void enroll_正常选课_按顺序检查重复_校验学生_占用名额_保存记录() {
         when(enrollmentRepository.existsByStudentIdAndCourseId(STUDENT_ID, COURSE_ID)).thenReturn(false);
+        givenStudentOk();
         Enrollment saved = new Enrollment();
         saved.setId(UUID.randomUUID().toString());
         saved.setStudentId(STUDENT_ID);
@@ -88,10 +83,9 @@ class EnrollmentServiceTest {
         assertEquals(COURSE_ID, result.getCourseId());
         assertEquals(EnrollmentStatus.ACTIVE, result.getStatus());
 
-        var order = inOrder(studentClient, catalogClient, enrollmentRepository);
-        order.verify(studentClient).findById(STUDENT_ID);
-        order.verify(catalogClient).findById(COURSE_ID);
+        var order = inOrder(enrollmentRepository, studentClient, catalogClient);
         order.verify(enrollmentRepository).existsByStudentIdAndCourseId(STUDENT_ID, COURSE_ID);
+        order.verify(studentClient).findById(STUDENT_ID);
         order.verify(catalogClient).occupy(COURSE_ID);
         order.verify(enrollmentRepository).save(any(Enrollment.class));
     }
@@ -106,21 +100,29 @@ class EnrollmentServiceTest {
     }
 
     @Test
-    void enroll_重复选课_409语义且不占用名额() {
-        givenStudentOk();
-        givenCourseOk();
+    void enroll_重复选课_409语义且在所有远程调用之前返回() {
         when(enrollmentRepository.existsByStudentIdAndCourseId(STUDENT_ID, COURSE_ID)).thenReturn(true);
 
         assertThrows(ConflictException.class, () -> service.enroll(STUDENT_ID, COURSE_ID));
-        verify(catalogClient, never()).occupy(anyString());
+        // 重复检查在任何远程调用之前完成
+        verifyNoInteractions(studentClient, catalogClient);
+        verify(enrollmentRepository, never()).save(any());
+    }
+
+    @Test
+    void enroll_课程不存在_保留404业务错误且不保存() {
+        when(enrollmentRepository.existsByStudentIdAndCourseId(STUDENT_ID, COURSE_ID)).thenReturn(false);
+        givenStudentOk();
+        doThrow(feignStatus(404)).when(catalogClient).occupy(COURSE_ID);
+
+        assertThrows(NotFoundException.class, () -> service.enroll(STUDENT_ID, COURSE_ID));
         verify(enrollmentRepository, never()).save(any());
     }
 
     @Test
     void enroll_课程已满_保留409业务错误且不保存() {
-        givenStudentOk();
-        givenCourseOk();
         when(enrollmentRepository.existsByStudentIdAndCourseId(STUDENT_ID, COURSE_ID)).thenReturn(false);
+        givenStudentOk();
         doThrow(feignStatus(409)).when(catalogClient).occupy(COURSE_ID);
 
         assertThrows(ConflictException.class, () -> service.enroll(STUDENT_ID, COURSE_ID));
@@ -147,7 +149,7 @@ class EnrollmentServiceTest {
         when(studentClient.findById(STUDENT_ID)).thenReturn(Map.of("id", "someone-else"));
 
         assertThrows(ResourceAccessException.class, () -> service.enroll(STUDENT_ID, COURSE_ID));
-        verify(catalogClient, never()).findById(anyString());
+        verify(catalogClient, never()).occupy(anyString());
     }
 
     @Test

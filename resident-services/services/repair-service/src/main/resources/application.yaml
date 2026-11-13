@@ -1,0 +1,46 @@
+﻿server:
+  port: 8082
+
+spring:
+  application:
+    name: repair-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:}
+        group: ${NACOS_GROUP:PERSONAL_GROUP}
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            read-timeout: 5000
+            logger-level: FULL
+      loadbalancer:
+        default:
+          retry:
+            enabled: false   # 涓嶈嚜鍔ㄩ噸璇曪紝閬垮厤閮ㄥ垎鎴愬姛鍐欏叆鍚庡啀閲嶅璋冪敤
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3312/repair_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USER:repair_user}
+    password: ${DB_PASSWORD:repair-pass-123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.zjgsu.hwy.repair.client: DEBUG
+
+

@@ -1,0 +1,6 @@
+services:
+  resident-service:
+    # 扩多实例时移除宿主机端口映射，避免第二个实例端口冲突
+    ports: !reset []
+    environment:
+      LOGGING_LEVEL_COM_ZJGSU_HWY: DEBUG

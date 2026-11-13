@@ -1,0 +1,7 @@
+# Local secrets and generated artifacts
+.env
+.env.*
+!.env.example
+monolith/target/
+monolith/.idea/
+*.log

@@ -34,6 +34,12 @@ public class EnrollmentService {
     }
 
     public Enrollment enroll(String studentId, String courseId) {
+        // 1. 本地重复选课检查（不发起远程调用，重复请求在任何远程访问前即返回 409）
+        if (enrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
+            throw new ConflictException("该学生已经选修此课程，不可重复选课");
+        }
+
+        // 2. 校验学生
         Map<String, Object> student;
         try {
             student = studentClient.findById(studentId);
@@ -47,19 +53,7 @@ public class EnrollmentService {
             throw new ResourceAccessException("学生服务返回无效响应");
         }
 
-        try {
-            catalogClient.findById(courseId);
-        } catch (FeignException e) {
-            if (e.status() == 404) {
-                throw new NotFoundException("课程不存在");
-            }
-            throw dependencyFailure("课程服务", e);
-        }
-
-        if (enrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
-            throw new ConflictException("该学生已经选修此课程，不可重复选课");
-        }
-
+        // 3. 调用课程服务占用名额（课程不存在由 occupy 返回 404，满员返回 409）
         try {
             catalogClient.occupy(courseId);
         } catch (FeignException e) {
