@@ -1,17 +1,24 @@
 # resident-services
 
-第 06 周拆分的社区微服务工程。第 07 周接入 Nacos 注册中心；第 08 周把报修服务对业主服务的调用改为 **OpenFeign + Spring Cloud LoadBalancer**，业主服务以 2 个实例运行，按服务名轮询分发。
+社区微服务工程。演进路线：
+
+- Week-06：单体拆分 resident-service / repair-service / notice-service
+- Week-07：Nacos 注册中心接入
+- Week-08：OpenFeign + Spring Cloud LoadBalancer，repair-service 调用 resident-service，支持多实例负载均衡
+- Week-09：API Gateway（统一入口）+ JWT 认证（auth-service）+ 角色鉴权
 
 ## 服务清单
 
 | 服务名（Nacos） | 模块 | 容器端口 | 宿主机端口 | 数据库（宿主机端口） |
 | --- | --- | --- | --- | --- |
+| `gateway-service` | `services/gateway-service` | 8080 | **8080（统一入口）** | — |
+| `auth-service` | `services/auth-service` | 8084 | 不映射（仅内网） | `auth_db`（3314） |
 | `resident-service` | `services/resident-service` | 8081 | 不映射（仅内网） | `resident_db`（3311） |
-| `repair-service` | `services/repair-service` | 8082 | 8092 | `repair_db`（3312） |
-| `notice-service` | `services/notice-service` | 8083 | 8093 | `notice_db`（3313） |
-| `nacos` | `nacos/nacos-server:v3.2.4` | 8848（服务端）/ 9848（SDK）/ 8080（控制台） | 18848 / 19848 / 18081 | `nacos-data` 数据卷 |
+| `repair-service` | `services/repair-service` | 8082 | 不映射（仅内网） | `repair_db`（3312） |
+| `notice-service` | `services/notice-service` | 8083 | 不映射（仅内网） | `notice_db`（3313） |
+| `nacos` | `nacos/nacos-server:v3.2.4` | 8848 / 9848 / 8080 | 18848 / 19848 / 18081 | `nacos-data` 数据卷 |
 
-三个服务均注册到默认命名空间，分组固定为 `PERSONAL_GROUP`。
+业务服务全部**不映射宿主机端口**，对外统一通过 Gateway 入口 `http://localhost:8080` 访问。分组固定为 `PERSONAL_GROUP`。
 
 `resident-service` **不映射宿主机端口**：它只被 `repair-service` 通过 Nacos 服务名 + Docker 内部网络调用，因此 `--scale` 多实例时不会出现宿主机端口冲突。需要直连它调试时，可临时用 `docker compose exec` 进入容器，或查看容器健康状态：
 
@@ -19,28 +26,51 @@
 docker ps --filter name=resident-services-resident-service --format '{{.Names}} {{.Status}}'
 ```
 
+## 测试账号与角色
+
+统一入口：`http://localhost:8080`。账号由 `auth-service` 首次启动时自动写入 `auth_db`，密码以 BCrypt 哈希存储。
+
+| 用户名 | 密码 | 角色 | 可访问范围 |
+| --- | --- | --- | --- |
+| `admin` | `admin123` | `ROLE_ADMIN` | 全部读写 |
+| `resident1` | `resident123` | `ROLE_RESIDENT` | 只读，写操作返回 403 |
+
+登录与鉴权示例：
+
+```bash
+# 登录获取 JWT
+curl -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin123"}'
+
+# 携带 Token 访问受保护接口
+curl -H "Authorization: Bearer <token>" http://localhost:8080/api/repair-tickets
+
+# 端到端验证（未登录 401 / 登录 200 / 越权 403 / 管理员写入 201）
+bash scripts/auth-test.sh
+```
+
+> 示例中的 `<token>` 必须替换为登录接口返回的真实值，文档不提交任何真实 Token 或密钥。
+
 ## 前置条件
 
 - Docker 与 Docker Compose
 - 根目录提供 `.env`（已被 `.gitignore` 排除，不入库）
+- 除原有 Nacos / DB 密码外，还需 `JWT_SECRET`（Base64 编码，原文 ≥32 字节；Gateway 与 Auth-Service 共享）
 
 ## 首次启动
 
 ```bash
 # 1. 准备本地凭据（PowerShell: Copy-Item .env.example .env）
 cp .env.example .env
-# 编辑 .env：至少替换 NACOS_PASSWORD 与 NACOS_AUTH_TOKEN（Base64，原文 >= 32 字节）
-# 生成 Token 示例：openssl rand -base64 32
+# 编辑 .env：替换 NACOS_PASSWORD / NACOS_AUTH_TOKEN / JWT_SECRET
+# 生成 JWT_SECRET：openssl rand -base64 32
 
-# 2. 先启动数据库与 Nacos
-docker compose up -d resident-db repair-db notice-db nacos
-
-# 3. 等待控制台可访问（http://localhost:18081），首次初始化管理员密码
-#    密码值取自 .env 的 NACOS_PASSWORD
-curl -X POST "http://localhost:18848/nacos/v3/auth/user/admin" -d "password=$NACOS_PASSWORD"
-
-# 4. 启动并构建三个业务服务
+# 2. 一次性启动全部容器（含新加入的 gateway-service / auth-service）
 docker compose up -d --build
+
+# 3. 等待 Gateway 健康（统一入口）
+curl http://localhost:8080/actuator/health
 ```
 
 管理员密码只需初始化一次；若删除 `nacos-data` 数据卷，需要重新初始化。

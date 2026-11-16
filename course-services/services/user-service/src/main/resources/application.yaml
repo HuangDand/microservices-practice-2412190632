@@ -21,6 +21,15 @@ spring:
       ddl-auto: update
     show-sql: false
 
+app:
+  seed:
+    student-password: ${STUDENT_PASSWORD:}
+    admin-password: ${ADMIN_PASSWORD:}
+
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+
 management:
   endpoints:
     web:

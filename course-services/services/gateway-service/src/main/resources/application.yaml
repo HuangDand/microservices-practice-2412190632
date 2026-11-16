@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:}
+        group: COURSE_GROUP
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: students
+              uri: lb://user-service
+              predicates:
+                - Path=/api/students/**,/api/auth/**
+            - id: catalog
+              uri: lb://catalog-service
+              predicates:
+                - Path=/api/courses/**
+            - id: enrollment
+              uri: lb://enrollment-service
+              predicates:
+                - Path=/api/enrollments/**
+
+jwt:
+  secret: ${JWT_SECRET:}

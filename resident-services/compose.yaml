@@ -203,6 +203,91 @@ services:
       retries: 24
       start_period: 40s
 
+  # ---------- 认证服务数据库 ----------
+  auth-db:
+    image: mysql:8.4.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: auth_db
+      MYSQL_USER: auth_user
+      MYSQL_PASSWORD: ${AUTH_DB_PASSWORD:-auth-pass-123}
+      MYSQL_ROOT_PASSWORD: ${AUTH_DB_ROOT_PASSWORD:-auth-root-123}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3314:3306"          # 仅宿主机调试用
+    volumes:
+      - auth-db-data:/var/lib/mysql
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=tcp -h 127.0.0.1 -u$${MYSQL_USER} --password=$${MYSQL_PASSWORD} -D $${MYSQL_DATABASE} -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ---------- 认证服务 ----------
+  # 不映射宿主机端口：对外只能通过 gateway-service 访问
+  auth-service:
+    build: ./services/auth-service
+    restart: unless-stopped
+    ports: []
+    environment:
+      SERVER_PORT: 8084
+      SPRING_APPLICATION_NAME: auth-service
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?请在 .env 中设置 NACOS_PASSWORD}
+      NACOS_GROUP: PERSONAL_GROUP
+      DB_URL: jdbc:mysql://auth-db:3306/auth_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USER: auth_user
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth-pass-123}
+      JWT_SECRET: ${JWT_SECRET:?请在 .env 中设置 JWT_SECRET（Base64）}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8084 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+
+  # ---------- API Gateway ----------
+  # 统一入口，对外唯一暴露端口 8080；内部用 lb:// 路由到服务名
+  gateway-service:
+    build: ./services/gateway-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_APPLICATION_NAME: gateway-service
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?请在 .env 中设置 NACOS_PASSWORD}
+      NACOS_GROUP: PERSONAL_GROUP
+      JWT_SECRET: ${JWT_SECRET:?请在 .env 中设置 JWT_SECRET（Base64）}
+    depends_on:
+      nacos:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - community-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+
 networks:
   community-net:
     driver: bridge
@@ -212,3 +297,4 @@ volumes:
   resident-db-data:
   repair-db-data:
   notice-db-data:
+  auth-db-data:
